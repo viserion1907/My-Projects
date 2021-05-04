@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../Intro2Programming/.idea/Intro2Programming.iml" filepath="$PROJECT_DIR$/../Intro2Programming/.idea/Intro2Programming.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/My-Projects.iml" filepath="$PROJECT_DIR$/.idea/My-Projects.iml" />
     </modules>
   </component>

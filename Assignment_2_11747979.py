@@ -34,13 +34,13 @@ def setup():
     turtle.speed(0)  # Disable all turtle animation
     turtle.hideturtle()  # Hide the turtle
     turtle.tracer(10)  # auto-refresh the screen after every 10 drawing steps
+    turtle.pensize(PENSIZE)
     turtle.penup()  # Put the pen up to prevent unnecessary drawings
     turtle.goto(TITLE_XCOR, TITLE_YCOR)
     turtle.write('Square Hunt', False, align='left', font=('Arial', 20, 'normal'))  # Display the game title
     turtle.goto(START_BTN_BORDER_X, START_BTN_BORDER_Y)
     turtle.pendown()
     # Draw the start button border
-    turtle.pensize(PENSIZE)
     turtle.begin_fill()
     turtle.fillcolor('#06C7BA')
     for i in range(4):
@@ -56,7 +56,6 @@ def setup():
     turtle.write('START', False, align='center', font=('Arial', 17, 'bold'))  # Display the start button
     turtle.goto(SCORE_XCOR, SCORE_YCOR)
     turtle.write('Score: 0', False, align='right', font=('Arial', 20, 'normal'))  # Display the initial score
-    turtle.update()
 
 
 def draw_grid():
@@ -92,13 +91,13 @@ def draw_y_axis(y_axis):
 
 def draw_target(grid_box_size):
     """ Function to draw the target squares """
-    turtle.penup()
-    turtle.setheading(0)  # Make the turtle face east (0 degrees)
     actual_grid_size = GRID_SIZE // grid_box_size  # Get the dimensions of each grid box
     target_size = actual_grid_size - 2 * MARGIN  # Get the dimensions of the target square
     # Create a random (x,y) coordinate to start the drawing
     target_x = random.randrange(BTM_LEFT_X + MARGIN, BTM_LEFT_X + GRID_SIZE - MARGIN, actual_grid_size)
     target_y = random.randrange(BTM_LEFT_Y + MARGIN, BTM_LEFT_Y + GRID_SIZE - MARGIN, actual_grid_size)
+    turtle.penup()
+    turtle.setheading(0)  # Make the turtle face east (0 degrees)
     turtle.goto(target_x, target_y)
     turtle.pendown()  # Put the pen down
     turtle.pensize(PENSIZE)  # Set the pen's width to 3 pixels
@@ -113,10 +112,10 @@ def draw_target(grid_box_size):
 
 def clear_target(grid_box_size):
     """ Function to clear the target squares """
-    turtle.penup()
-    turtle.setheading(0)
     actual_grid_size = GRID_SIZE // grid_box_size  # Get the dimensions of each grid box
     target_size = actual_grid_size - 2 * MARGIN  # Get the dimensions of the target square
+    turtle.penup()
+    turtle.setheading(0)
     turtle.goto(turtle.xcor(), turtle.ycor())  # Go to drawing's current location
     turtle.pendown()
     turtle.pensize(PENSIZE)  # Set the pen's width to 3 pixels
@@ -139,30 +138,29 @@ def handle_click(x, y):
     else:
         print('Out of grid boundary')
 
-    actual_grid_size = GRID_SIZE // grid_box  # Get the dimensions of each grid box
-    target_size = actual_grid_size - 2 * MARGIN  # Get the dimensions of the target square
-
     # This initiates the start of the game after the user clicks on the start button
     if START_BTN_BORDER_X <= x <= (START_BTN_BORDER_X + START_BTN_BORDER_LENGTH) and \
             START_BTN_BORDER_Y <= y <= (START_BTN_BORDER_Y + START_BTN_BORDER_LENGTH):
+        print('GAME STARTED')
         update_start_text()
         start_string = '[' + str(square_count) + ']'  # Display the initial score value at start game
         turtle.write(start_string, False, align='center', font=('Arial', 20, 'normal'))
         turtle.setheading(0)
-        print('START GAME')
         next_square(grid_box, timer)  # Call the next_square function to kickstart the loop
     else:
         print('GAME NOT STARTED!')
 
-    update_score(target_size, x, y)  # Call the update_score function to start updating the score
+    update_score(x, y)  # Call the update_score function to start updating the score
 
 
-def update_score(target_size, x, y):
+def update_score(target_x, target_y):
     """ This function updates the score after a successful hit or decrement after a miss """
     global score  # score to update
+    actual_grid_size = GRID_SIZE // grid_box  # Get the dimensions of each grid box
+    target_size = actual_grid_size - 2 * MARGIN  # Get the dimensions of the target square
+
     # Register a successful hit, change the cell colour and increment the score by one
-    if turtle.xcor() <= x <= (turtle.xcor() + target_size) and turtle.ycor() <= y <= (turtle.ycor() + target_size) and \
-            turtle.fillcolor() == 'green':
+    if turtle.xcor() <= target_x <= (turtle.xcor() + target_size) and turtle.ycor() <= target_y <= (turtle.ycor() + target_size) and turtle.fillcolor() == 'green':
         score += 1  # Increment score on a successful hit
         turtle.pencolor('#33DDFF')  # Set the pen colour to bright blue
         turtle.fillcolor('#33DDFF')  # Fill the square with bright blue
@@ -187,9 +185,9 @@ def update_score_text():
     # Draw a white rectangle to clear the score each time it is updated
     turtle.goto(SCORE_XCOR, SCORE_YCOR)
     turtle.pendown()
-    turtle.begin_fill()
     turtle.pencolor('white')
     turtle.fillcolor('white')
+    turtle.begin_fill()
     for i in range(4):
         if i % 2 == 0:
             turtle.backward(START_BTN_BORDER_LENGTH)
