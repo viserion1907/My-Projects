@@ -1,7 +1,7 @@
 """ LifeServe Blood Institute (lBI) blood-group program """
 
 import sys
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from hospital import check_demand
 from datetime import date
 
@@ -18,14 +18,14 @@ STOCK_VISUAL_REPORT = 4
 EXIT = 5
 
 # Create a blood-group transfusion compatibility table in the form of a dictionary
-blood_compatibility = {'O-': ['O-'],
-                       'O+': ['0-', 'O+'],
-                       'B-': ['O-', 'B-'],
-                       'B+': ['O-', 'O+', 'B-', 'B+'],
-                       'A-': ['O-', 'A-'],
-                       'A+': ['O-', 'O+', 'A-', 'A+'],
-                       'AB-': ['O-', 'B-', 'A-', 'AB-'],
-                       'AB+': ['O-', 'O+', 'B-', 'B+', 'A-', 'A+', 'AB-', 'AB+']}
+blood_table = {'O-': ['O-'],
+               'O+': ['0-', 'O+'],
+               'B-': ['O-', 'B-'],
+               'B+': ['O-', 'O+', 'B-', 'B+'],
+               'A-': ['O-', 'A-'],
+               'A+': ['O-', 'O+', 'A-', 'A+'],
+               'AB-': ['O-', 'B-', 'A-', 'AB-'],
+               'AB+': ['O-', 'O+', 'B-', 'B+', 'A-', 'A+', 'AB-', 'AB+']}
 
 
 def main():
@@ -37,8 +37,7 @@ def main():
     if len(donors_db) == 0:  # If input field is left blank, use default values
         donors_db = DONORS_FILE
     else:
-        # Concatenate filename with extension so that user does not have to enter it and strip to remove extra
-        # spaces
+        # Concatenate filename with extension so that user does not have to enter it and strip to remove extra spaces
         donors_db = donors_db.strip() + '.txt'
     stock_db = input('Stock inventory database (bags): ').lower()
     if len(stock_db) == 0:
@@ -46,35 +45,41 @@ def main():
     else:
         stock_db = stock_db.strip() + '.txt'
 
-    if load_db(donors_db, stock_db):  # Ensure that the files are loaded successfully
+    donor_dict, stock_dict = load_db(donors_db, stock_db)
+    if load_db(donors_db, stock_db):  # Confirm that the files are loaded successfully
         print('Database loaded successfully\n')
 
-        choice = 0  # Hold the user's menu choice
-        while choice != EXIT:
-            # Display the menu
-            display_menu()
+        try:
+            choice = 0  # Hold the user's menu choice
+            while choice != EXIT:
+                # Display the menu
+                display_menu()
 
-            choice = int(input('Enter your choice: '))  # Get the user's choice
-            print()
-            if choice == CHECK_INVENTORY:
-                print('Following bags are out of their use-by date')
-                check_inventory()
-                print('Please dispose of them. Press any key when done...\nUpdated database files saved to disk.\n')
-            elif choice == ATTEND_BLOOD_DEMAND:
-                demand = check_demand()
-                if demand != 'X':
-                    print('Currently', demand, 'is required\nChecking the stock inventory...')
-                    attend_demand(demand)
+                choice = int(input('Enter your choice: '))  # Get the user's choice
+                print()
+                if choice == CHECK_INVENTORY:
+                    new_stock = check_inventory(stock_dict)  # Call the check_inventory function
+                    input('Please dispose of them. Press [Enter] when done... ')
+                    save_db(donor_dict, new_stock)  # Call the save_db() function to save the data into file
+                    print('Updated database files saved to disk.')
+                elif choice == ATTEND_BLOOD_DEMAND:
+                    demand = check_demand()
+                    if demand != 'X':
+                        print('Currently', demand, 'is required\nChecking the stock inventory...\n')
+                        attend_demand(demand, stock_dict, donor_dict)  # Call the attend to blood demand function
+                    else:
+                        print('Could not connect to hospital web server.\nPlease try again after some time.\n')
+                elif choice == RECORD_NEW_DONATION:
+                    unique_id = int(input('Enter the donor\'s unique ID: '))
+                    record_donation(unique_id)  # Call the record_donation() function
+                elif choice == STOCK_VISUAL_REPORT:
+                    visual_report(stock_dict)  # Call the visual_report() function
+                elif choice == EXIT:
+                    print('Have a good day.')
                 else:
-                    print('Could not connect to hospital web server.\nPlease try again after some time.')
-            elif choice == RECORD_NEW_DONATION:
-                print('Record new donation')
-            elif choice == STOCK_VISUAL_REPORT:
-                print('Stock visual report')
-            elif choice == EXIT:
-                print('Have a good day.')
-            else:
-                print('Invalid choice! Please try again.')
+                    print('Invalid choice! Please try again.')
+        except ValueError:  # Catch any invalid input
+            sys.exit('Invalid input. System exiting...\n')
 
 
 def load_db(donor_fname, stock_fname):
@@ -114,6 +119,7 @@ def load_db(donor_fname, stock_fname):
             date_collected = each_bag[2]
             # Append data to dictionary
             stock_dict[bag_id] = [blood_group, date_collected]
+
         stock_file.close()
 
     except FileNotFoundError:
@@ -125,35 +131,29 @@ def load_db(donor_fname, stock_fname):
     except:  # Generic handler to capture any other unspecified error
         sys.exit('Something went wrong')
 
-    return donor_dict, stock_dict
+    return donor_dict, stock_dict  # Return the donor and stock dictionary
 
 
 def save_db(donor_fname, stock_fname):
     """ This function updates the donor and bags files, and saves them into new files """
-    donors, stock = load_db(DONORS_FILE, BAGS_FILE)  # Call the load_db() function
-    donor_fname = DONORS_NEW_FILE
-    donor_dict_new = {}
-    donor_file = open(donor_fname, 'w')
-    for each_donor in range(1, 100):
-        # each_donor = each_donor.strip().split(',')  # Remove leading and trailing characters and split
-        # Get each field individually
-        # donor_id = int(each_donor[0])
-        # name = each_donor[1]
-        # phone = each_donor[2]
-        # email = each_donor[3]
-        # blood_group = each_donor[4]
-        # last_donation_date = each_donor[5]
-        # Append data to dictionary
-        # donor_dict_new[donor_id] = [name, phone, email, blood_group, last_donation_date]
-        print(each_donor)
-    donor_file.write(str(DONORS_NEW_FILE))
+    try:
+        stock_file = open(BAGS_NEW_FILE, 'w')
+        for key, value in stock_fname.items():
+            value_str = ",".join(map(str, value))  # Convert the value list into a string of characters
+            stock_file.write(str(key) + ',' + value_str + '\n')
 
-    donor_file.close()
+        stock_file.close()
 
-    bags_file = open(stock_fname, 'w')
-    bags_file.close()
+    except IOError:
+        sys.exit('Some error in the file I/O occurred')
 
-    return donor_dict_new
+    except TypeError:
+        sys.exit('Cannot unpack non-iterable int object')
+
+    except ValueError:
+        sys.exit('Too many values to unpack')
+
+    # return donor_dict_new
 
 
 def display_menu():
@@ -168,57 +168,140 @@ def display_menu():
     print('(5) Exit')
 
 
-def check_inventory():
+def check_inventory(stock_dictionary):
     """ This function searches for any bags older than 30 days, and if found, it displays their ID numbers so that staff
-     can dispose them of them """
-    donors, stock = load_db(DONORS_FILE, BAGS_FILE)  # Call the load_db() function
-    for key, value in stock.items():
+     can dispose of them """
+    print('Following bags are out of their use-by date')
+    for key, value in stock_dictionary.items():
         # Return date collected corresponding to a date string in the format YYYY-MM-DD
-        date_collected = date.fromisoformat(value[-1])
+        date_collected = date.fromisoformat(value[1])
         today = date.today()  # Set today's date
         bag_age = (today - date_collected).days  # Calculate difference in number of days
-        stock[key] += [str(bag_age)]  # Add a new field for days old to the dictionary and convert it to string
-        bag_age = int(value[-1])  # Convert the age of the bag value to integer
+        # Add a new field for days old to the dictionary
+        stock_dictionary[key] += [bag_age]
+        bag_age = value[-1]  # Assign age of bag to the last position in the value list
         if bag_age > 30:  # Search for any bags older than 30 days
             print(key)  # Display the ID
-    # donors_update, stock_update = save_db(DONORS_FILE, BAGS_FILE)
+
+    # Create a new dictionary with the updated stock records
+    new_stock_dict = {k: v[:-1] for k, v in stock_dictionary.items() if v[-1] < 30}
+
+    return new_stock_dict
 
 
-def attend_demand(blood_type):
-    """ This function displays what blood group is available in the database """
-    donors_dict, stock_dict = load_db(DONORS_FILE, BAGS_FILE)
-    stock = open(BAGS_FILE, 'r')  # Create file handler to open bags.txt in read-mode
-    for bag_id, blood in stock_dict.items():
-        # each_bag_list = each_bag.strip().split(',')  # Convert line to list, remove redundant spaces
-        # bag_id = each_bag_list[0]  # Assign bag_id to first index in list
-        # blood_group = each_bag_list[1]  # Assign blood_group to second index in list
-        # # Search for the blood group in the blood compatibility dictionary
-        # if blood_group in str(blood_compatibility[blood_type]):
-        #     print('Following bag should be supplied\nID: ' + bag_id + ' (' + blood_group + ')')
-        #     break  # break to print only the first blood group found
-        # else:
-        #     print('Sorry, an eligible donor does not exist in the database.')
-        #     # break
+def attend_demand(blood_type, stock_dict, donors_dict):
+    """ This function searches for available blood group in the database and find a list of eligible donors with
+    compatible blood type whom staff can contact. If no eligible donors exist, it notifies the staff """
+    for bag_id, bag_details in stock_dict.items():
+        # Check if value at index[0] in the list is in the blood_table dictionary
+        if bag_details[0] in blood_table[blood_type]:
+            print('Following bag should be supplied\nID: ' + str(bag_id) + ' (' + bag_details[0] + ')\n')
+            # Create a new stock dictionary with dispatched bag removed from database, which is later saved to file
+            new_stock = {k: v for k, v in stock_dict.items() if k != bag_id}
+            input('Press [Enter] once it is packed for dispatch... ')
+            save_db(donors_dict, new_stock)  # Call the save_db() function
+            print('Inventory records updated.\nUpdated database files saved to disk.\n')
+            break  # break to print only the first blood group found
+    else:
+        # No eligible donor exists
+        print('We can not meet the requirement. Checking the donor database...\n')
+        print('Following donors match the requirements. Please contact them for new donation.\n')
+        for donor_id, donor_details in donors_dict.items():
+            # Give each index a variable name
+            name = donor_details[0]
+            phone = donor_details[1]
+            email = donor_details[2]
+            if donor_details[3] in blood_table[blood_type]:
+                print('• ' + name + ', ' + phone + ', ' + email + '\n')
 
-        # print(id, blood[0])
-        if blood[0] in blood_compatibility[blood_type]:
-            print('Following bag should be supplied\nID: ' + str(bag_id) + ' (' + str(blood[0]) + ')')
+
+def record_donation(donor_unique_id):
+    """ This function allows staff to check for available donors and add a new bag to the database """
+    donors_dict, stock_dict = load_db(DONORS_FILE, BAGS_FILE)  # Call the load_db() function
+    date_today = date.today()  # Set today's date
+
+    for donor_id, donor_details in donors_dict.items():
+        # Return last donation date corresponding to a date string in the format YYYY-MM-DD
+        last_donation = date.fromisoformat(donor_details[-1])
+        age_of_donation = (date_today - last_donation).days  # Calculate difference in number of days
+        # Add a new field for donation age to the dictionary and convert it to string
+        donors_dict[donor_id] += [str(age_of_donation)]
+        age_of_donation = int(donor_details[-1])  # Convert the donation age value to integer
+        if donors_dict.get(donor_unique_id) is None:  # If donor id is not found in the database
+            print('That ID does not exist in the database.\nTo register a new donor, please contact the system '
+                  'administrator.\n')
             break
-        # else:
-        #     print('Sorry, an eligible donor does not exist in the database.')
+        # Ineligible if donation age is greater than 120 days between last donation
+        elif donor_id == donor_unique_id and age_of_donation >= 120:
+            print(donor_unique_id, donors_dict[donor_unique_id])
+            print('Sorry, this donor is not eligible for donation.\n')
+            break
+    else:
+        # If eligible, add a new bag with the current date and new autogenerated ID
+        print('Recording a new donation with following details:')
+        for donor_id, donor_details in donors_dict.items():
+            donor_blood_group = donor_details[3]
+            if donor_id == donor_unique_id:
+                print('From: ', donor_unique_id)
+                print('Group: ', donor_blood_group)
+                print('Date: ', date_today)
+                print('Bag ID: ')
+                break
 
 
+def visual_report(bags_file):
+    """ This function allows the user to see the distribution of in-stock blood bags in the form of a pie chart """
+    # Initialise the blood group count values to zero
+    count_O_neg, count_O_pos, count_B_neg, count_B_pos = 0, 0, 0, 0
+    count_A_neg, count_A_pos, count_AB_neg, count_AB_pos = 0, 0, 0, 0
 
-# main()
-attend_demand('B+')
-# check_inventory()
-# save_db(DONORS_NEW_FILE, BAGS_NEW_FILE)
-# print(blood_compatibility['AB+'])
-# fh = open('bags.txt')
-# for line in fh:
-#     linelst = line.strip().split(',')
-#     print(linelst)
-#     if linelst[1] in str(blood_compatibility['AB+']):
-#         found = linelst[1]
-#         print(found)
-#         break
+    report_dict = {}  # Create an empty dictionary to store the total count of blood per group
+
+    # Count the number of occurrences of blood per group
+    for key, value in bags_file.items():
+        blood_group = value[0]
+        if blood_group == 'O-':
+            count_O_neg += 1
+            report_dict['O-'] = count_O_neg
+        elif blood_group == 'O+':
+            count_O_pos += 1
+            report_dict['O+'] = count_O_pos
+        elif blood_group == 'B-':
+            count_B_neg += 1
+            report_dict['B-'] = count_B_neg
+        elif blood_group == 'A-':
+            count_A_neg += 1
+            report_dict['A-'] = count_A_neg
+        elif blood_group == 'A+':
+            count_A_pos += 1
+            report_dict['A+'] = count_A_pos
+        elif blood_group == 'AB-':
+            count_AB_neg += 1
+            report_dict['AB-'] = count_AB_neg
+        elif blood_group == 'AB+':
+            count_AB_pos += 1
+            report_dict['AB+'] = count_AB_pos
+        else:
+            report_dict = {}
+
+    # Create list of labels and values from dictionary
+    labels = [key for key in report_dict.keys()]
+    values = [value for value in report_dict.values()]
+
+    # Format the labels and values
+    label_value = ['{} ({:,.0f})'.format(label, value) for label, value in zip(labels, values)]
+
+    # Plot the pie-chart
+    plt.pie(values, labels=label_value)
+    plt.show()
+
+
+main()
+# donors, stock = load_db(DONORS_FILE, BAGS_FILE)
+# d = check_demand()
+# visual_report(stock)
+# print(donors)
+# attend_demand(d, donors, stock)
+num = 1255
+# record_donation(num)
+# ch = check_inventory(stock)
