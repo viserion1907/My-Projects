@@ -50,8 +50,10 @@ def main():
         stock_db = stock_db.strip() + '.txt'
 
     donors_data, stock_data = load_db(donors_db, stock_db)
-    if load_db(donors_db, stock_db):  # Confirm that the files are loaded successfully
-        print('Database loaded successfully\n')
+    if len(donors_data.keys()) == 0 or len(stock_data.keys()) == 0:  # Check if either file is empty (no data)
+        sys.exit('File(s) empty!!!')
+    else:
+        print('Database loaded successfully\n')  # Confirm that the files are loaded successfully
 
         try:
             choice = 0  # Hold the user's menu choice
@@ -83,6 +85,7 @@ def main():
                     print('Have a good day.')
                 else:
                     print('Invalid choice! Please try again.')
+
         except ValueError:  # Catch any invalid input
             sys.exit('Invalid input. System exiting...\n')
 
@@ -90,50 +93,51 @@ def main():
 def load_db(donor_fname, stock_fname):
     """ This function takes in two file names as parameters, reads both files and stores their data in a dictionary """
     donor_dict = {}  # Create an empty donor dictionary
-    # try:
-    donor_file = open(donor_fname, 'r')  # Open the donors.txt file in read mode
-    for each_donor in donor_file:
-        each_donor = each_donor.strip().split(',')  # Remove leading and trailing characters and split
-        # Get each field individually
-        donor_id = int(each_donor[0])
-        donor_name = each_donor[1]
-        phone = each_donor[2]
-        email = each_donor[3]
-        blood_group = each_donor[4]
-        last_donation_date = each_donor[5]
-        # Append data to dictionary
-        donor_dict[donor_id] = [donor_name, phone, email, blood_group, last_donation_date]
-    donor_file.close()
+    try:
+        donor_file = open(donor_fname, 'r')  # Open the donors.txt file in read mode
+        for each_donor in donor_file:
+            each_donor = each_donor.strip().split(',')  # Remove leading and trailing characters and split
+            # Get each field individually
+            donor_id = int(each_donor[0])
+            donor_name = each_donor[1]
+            phone = each_donor[2]
+            email = each_donor[3]
+            blood_group = each_donor[4]
+            last_donation_date = each_donor[5]
+            # Append data to dictionary
+            donor_dict[donor_id] = [donor_name, phone, email, blood_group, last_donation_date]
+        donor_file.close()
 
-    # except FileNotFoundError:
-    #     sys.exit('No such file or directory')
-    #
-    # except ValueError:
-    #       sys.exit('Invalid data for Bag ID (should be int)')
+    except FileNotFoundError:
+        sys.exit('No such file or directory')
 
-    # except IndexError:
-    #     sys.exit('File data format is invalid (list index of of range)')
-    #
-    # except IOError:
-    #     sys.exit('Some error in the file I/O occurred')
-    #
-    # except:  # Generic handler to capture any other unspecified error
-    #     sys.exit('Something went wrong')
+    except ValueError:
+        sys.exit('Invalid data for Donor ID (should be int)')
+
+    except IndexError:
+        sys.exit('File data format is invalid (list index of of range)')
+
+    except IOError:
+        sys.exit('Some error in the file I/O occurred')
+
+    except:  # Generic handler to capture any other unspecified error
+        sys.exit('Something went wrong')
 
     stock_dict = {}  # Create an empty stock dictionary
-    # try:
-    stock_file = open(stock_fname, 'r')  # Open the bags.txt file in read mode
-    for each_bag in stock_file:
-        each_bag = each_bag.strip().split(',')
-        bag_id = int(each_bag[0])
-        blood_group = each_bag[1]
-        date_collected = each_bag[2]
-        stock_dict[bag_id] = [blood_group, date_collected]  # Append data to dictionary
-    stock_file.close()
+    try:
+        stock_file = open(stock_fname, 'r')  # Open the bags.txt file in read mode
+        for each_bag in stock_file:
+            each_bag = each_bag.strip().split(',')
+            bag_id = int(each_bag[0])
+            blood_group = each_bag[1]
+            date_collected = each_bag[2]
+            stock_dict[bag_id] = [blood_group, date_collected]  # Append data to dictionary
+        stock_file.close()
 
     # except FileNotFoundError:
     #     sys.exit('No such file or directory')
-
+    except ValueError:
+        sys.exit('Invalid data for Bag ID (should be int)')
     # except IOError:
     #     sys.exit('Some error in the file I/O occurred')
     #
@@ -217,12 +221,12 @@ def check_inventory(stock_dictionary):
     return new_stock_dict
 
 
-def attend_demand(blood_type, donors_dict, stock_dict):
+def attend_demand(blood_type_required, donors_dict, stock_dict):
     """ This function searches for available blood group in the database and find a list of eligible donors with
     compatible blood type whom staff can contact. If no eligible donors exist, it notifies the staff """
     for bag_id, bag_details in stock_dict.items():
-        # Check if value at index[0] in the list is in the blood_table dictionary
-        if bag_details[0] in blood_table[blood_type]:
+        # Check if value at index[0] in the list is in the blood_table dictionary to find compatible bags
+        if bag_details[0] in blood_table[blood_type_required]:
             print('Following bag should be supplied\nID: ' + str(bag_id) + ' (' + bag_details[0] + ')\n')
             # Create a new stock dictionary with dispatched bag removed from database, which is later saved to file
             new_stock = {k: v[:2] for k, v in stock_dict.items() if k != bag_id}
@@ -231,7 +235,7 @@ def attend_demand(blood_type, donors_dict, stock_dict):
             print('Inventory records updated.\nUpdated database files saved to disk.\n')
             break  # break to print only the first blood group found
     else:
-        # No eligible donor exists
+        # Get the list of eligible donors with compatible blood type
         print('We can not meet the requirement. Checking the donor database...\n')
         print('Following donors match the requirements. Please contact them for new donation.\n')
         for donor_id, donor_details in donors_dict.items():
@@ -240,11 +244,11 @@ def attend_demand(blood_type, donors_dict, stock_dict):
             phone = donor_details[1]
             email = donor_details[2]
             blood_grp = donor_details[3]
-            if blood_grp in blood_table[blood_type]:
+            if blood_grp in blood_table[blood_type_required]:
                 print('• ' + name + ', ' + phone + ', ' + email + '\n')
 
 
-def record_donation(donor_unique_id, donors_dic, stock_dic):
+def record_donation(unique_donor_id, donors_dic, stock_dic):
     """ This function allows staff to check for available donors and add a new bag to the database """
     date_today = date.today()  # Set today's date
     for donor_id, donor_details in donors_dic.items():
@@ -254,12 +258,12 @@ def record_donation(donor_unique_id, donors_dic, stock_dic):
         # Add a new field for donation age to the dictionary
         donors_dic[donor_id].append(age_of_donation)
         age_of_donation = donor_details[-1]
-        if donors_dic.get(donor_unique_id) is None:  # If donor id is not found in the database
+        if donors_dic.get(unique_donor_id) is None:  # If donor id is not found in the database
             print('That ID does not exist in the database.\nTo register a new donor, please contact the system '
                   'administrator.\n')
             break
         # Ineligible if donation age is greater than 120 days from the last donation
-        elif donor_id == donor_unique_id and age_of_donation >= 120:
+        elif donor_id == unique_donor_id and age_of_donation >= 120:
             print('Sorry, this donor is not eligible for donation.\n')
             break
     else:
@@ -270,7 +274,7 @@ def record_donation(donor_unique_id, donors_dic, stock_dic):
             donor_name = donor_details[0]
             donor_blood_group = donor_details[3]
             last_donation_date = date_today.isoformat()  # Convert date object to ISO format
-            if donor_id == donor_unique_id:
+            if donor_id == unique_donor_id:
                 print('From: ', donor_name)
                 print('Group: ', donor_blood_group)
                 print('Date: ', date_today)
@@ -345,6 +349,10 @@ def add_bag(blood_group):
         else:
             print('Invalid choice\n')
         new_bags_file.close()
+
+    except FileNotFoundError:
+        print('No such file or directory')
+
     except ValueError:
         print('Invalid data or file is empty')
 
@@ -353,11 +361,3 @@ def add_bag(blood_group):
 
 
 main()
-# donors, stock = load_db(DONORS_FILE, BAGS_FILE)
-# d = check_demand()
-# visual_report(stock)
-# print(donors)
-# attend_demand(d, donors, stock)
-# record_donation(num)
-# ch = check_inventory(stock)
-# add_bag('O-')
